@@ -16,11 +16,75 @@
 
 ---
 
+## Описание решения
+
+### Структура проекта
+
+```
+task-6-quaternions/
+├── pyproject.toml              # метаданные пакета и настройки pytest
+├── src/quaternions/
+│   ├── __init__.py             # экспортирует Quaternion
+│   └── quaternion.py           # класс Quaternion
+└── tests/
+    └── test_quaternion.py      # тесты pytest
+```
+
+### Класс `Quaternion`
+
+Кватернион `q = w + xi + yj + zk` хранит скалярную часть `w` и векторную часть `(x, y, z)`.
+Объекты неизменяемые: компоненты доступны только для чтения через свойства `w`, `x`, `y`, `z`,
+а все операции возвращают новый кватернион.
+
+| Операция | Реализация |
+| --- | --- |
+| Сложение, вычитание, минус | `q1 + q2`, `q1 - q2`, `-q` |
+| Умножение | `q1 * q2` — произведение Гамильтона (некоммутативно: `i * j = k`, `j * i = -k`); `q * 2`, `2 * q`, `q / 2` — умножение и деление на число |
+| Сопряжение | `q.conjugate()` → `w - xi - yj - zk` |
+| Норма | `q.norm()` → `sqrt(w² + x² + y² + z²)`, `q.normalized()` |
+| Обратный | `q.inverse()` → `conjugate / norm²` (для нулевого — `ValueError`) |
+| Сравнение | `q1 == q2` (точное), `q1.isclose(q2)` (с допуском) |
+| Поворот | `Quaternion.from_axis_angle(axis, angle)` создаёт единичный кватернион поворота на угол `angle` (радианы) вокруг оси `axis`; `q.rotate(v)` поворачивает вектор по формуле `q v q⁻¹` |
+
+Композиция поворотов — это умножение: поворот сначала на `q1`, затем на `q2` равен повороту на `q2 * q1`.
+
+### Пример
+
+```python
+import math
+from quaternions import Quaternion
+
+q = Quaternion.from_axis_angle((0, 0, 1), math.pi / 2)  # 90° вокруг оси z
+print(q.rotate((1, 0, 0)))  # ≈ (0, 1, 0)
+
+first = Quaternion.from_axis_angle((1, 0, 0), math.pi / 2)
+second = Quaternion.from_axis_angle((0, 0, 1), math.pi / 2)
+v = (0, 1, 0)
+combined = (second * first).rotate(v)
+sequential = second.rotate(first.rotate(v))
+assert math.dist(combined, sequential) < 1e-12
+```
+
+### Тесты
+
+`tests/test_quaternion.py` проверяет:
+
+- создание, свойства только для чтения, ошибки для некорректных данных;
+- таблицу умножения `i, j, k`, некоммутативность и ассоциативность умножения;
+- сопряжение, норму (в том числе `|pq| = |p||q|`) и обратный кватернион;
+- повороты на 90°, 180°, 360°, сохранение длины вектора, неподвижность вектора на оси;
+- композицию поворотов, важность порядка и отмену поворота обратным кватернионом.
+
+Используются `assert`, `pytest.approx`, `pytest.raises`, фикстуры и `pytest.mark.parametrize`.
+Примеры из docstring'ов также запускаются как doctest.
+
+---
+
 ## Запуск тестов
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install pytest
+python -m pip install -e '.[test]'
 pytest
 ```
