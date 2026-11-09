@@ -15,7 +15,7 @@ class Quaternion:
     Quaternion(0, 0, 0, 1)
     """
 
-    __slots__ = ("_w", "_x", "_y", "_z")
+    __slots__ = ("_w", "_x", "_y", "_z", "_rotation_inverse")
 
     def __init__(self, w: float = 0, x: float = 0, y: float = 0, z: float = 0) -> None:
         for value in (w, x, y, z):
@@ -25,6 +25,7 @@ class Quaternion:
         self._x = x
         self._y = y
         self._z = z
+        self._rotation_inverse = None
 
     @classmethod
     def from_vector(cls, v: Vector3) -> "Quaternion":
@@ -141,10 +142,14 @@ class Quaternion:
         return self.conjugate() / length_squared
 
     def rotate(self, v: Vector3) -> Vector3:
-        """Rotate a 3D vector using q * v * q.inverse()."""
-        vector = Quaternion.from_vector(v)
-        rotated = self * vector * self.inverse()
-        return rotated.vector
+        """Rotate a 3D vector using q * v * q.inverse(), reusing the inverse."""
+        product = self * Quaternion.from_vector(v)
+        # Older pickles can leave this slot unset.
+        inverse = getattr(self, "_rotation_inverse", None)
+        if inverse is None:
+            inverse = self.inverse()
+            self._rotation_inverse = inverse
+        return (product * inverse).vector
 
 
 def _is_real(value: object) -> bool:

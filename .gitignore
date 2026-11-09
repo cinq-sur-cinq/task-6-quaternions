@@ -3,6 +3,7 @@ __pycache__/
 *.py[codz]
 *$py.class
 .gitignore
+.Ds_Store
 
 # C extensions
 *.so
